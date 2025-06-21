@@ -1,10 +1,11 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/sequelize';
 import { MailService } from 'src/common/mail/mail.service';
 import { Users } from 'src/common/models/user.models';
 import { RegisterDto } from './AuthDto/register.dto';
 import  *  as bcrypt  from "bcrypt"
+import { LoginDto } from './AuthDto/login.dto';
 @Injectable()
 export class AuthService {
     constructor(@InjectModel(Users) private userModel: typeof Users, 
@@ -36,5 +37,16 @@ export class AuthService {
 
        return { token, data }
 
+    }
+    async login(payload: Required<LoginDto>) {
+       let exists = await this.userModel.findOne({where: {email: payload.email}})
+       if (!exists) throw new BadRequestException(`this ${payload.email} does not exists`)
+
+       let compare = await bcrypt.compare(payload.password, exists.dataValues.password)
+       if(!compare) throw new BadRequestException(`this ${payload.password} incorrect password`)
+
+        let token = await this.generateToken({userId: exists.dataValues.id, role: exists.dataValues.role})
+
+        return { token, exists,}
     }
 }
