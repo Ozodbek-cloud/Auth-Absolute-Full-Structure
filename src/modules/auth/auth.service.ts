@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/sequelize';
 import { MailService } from 'src/common/mail/mail.service';
@@ -11,6 +11,7 @@ import { RedisService } from 'src/common/redis/redis.service';
 import { VerificationDto } from './AuthDto/verifiyDto';
 import { resetPasswordDto } from './AuthDto/ResetPasswordDto';
 import { sendVerifyDto } from './AuthDto/sendVerifyDto';
+import { refreshTokenDto } from './AuthDto/refresh-token';
 
 interface JwtPayload{
         id: number,
@@ -119,5 +120,15 @@ export class AuthService {
     return {
       message: "Password Updated SuccessFully"
     }
+    }
+
+    async refresh_token({token}: {token: string}) {
+      try{
+        let payload = await this.jwtService.verifyAsync(token)
+        if (!payload) throw new UnauthorizedException()
+          return this.generateToken({ id: payload.id, role: payload.role}, true)
+      } catch(error) {
+        throw new UnauthorizedException("Invalid or expired refresh token")
+      }
     }
 }
